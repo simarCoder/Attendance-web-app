@@ -1,0 +1,37 @@
+
+====================================
+EMPLOYEE :
+
+employee_id(PK)
+name
+role
+hourly_rate
+join_date
+status
+
+------------------------------------
+
+ATTENDANCE :
+
+attendance_id (PK)
+employee_id (FK)
+date
+check_in_time
+check_out_time
+worked_hours
+
+------------------------------------
+
+SALARY :
+
+salary_id (PK)
+employee_id (FK)
+month
+total_hours
+hourly_rate
+total_salary
+generated_on
+
+------------------------------------
+
+====================================

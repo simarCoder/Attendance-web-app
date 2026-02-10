@@ -1,0 +1,11 @@
+<td>#${emp.id || emp.employee_id}</td>
+            <td>${emp.name}</td>
+            <td>${emp.role}</td>
+            <td>₹${emp.monthly_salary}</td>
+            <td><span class="status-badge">Active</span></td>
+            <td>
+                <button onclick="deleteEmployee(${emp.id || emp.employee_id})" 
+                        style="background: var(--danger); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">
+                    Delete
+                </button>
+            </td>

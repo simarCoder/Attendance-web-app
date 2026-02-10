@@ -1,0 +1,78 @@
+/* theme.css
+    Defines the core color palette, typography, and base resets.
+    Theme: Dark Slate & Teal
+*/
+
+:root {
+  /* Color Palette */
+  --bg-body: #0f172a; /* Slate 900 */
+  --bg-sidebar: #020617; /* Slate 950 */
+  --bg-card: #1e293b; /* Slate 800 */
+  --bg-input: #334155; /* Slate 700 */
+
+  --text-main: #f8fafc; /* Slate 50 */
+  --text-muted: #94a3b8; /* Slate 400 */
+
+  --primary: #14b8a6; /* Teal 500 */
+  --primary-hover: #0d9488; /* Teal 600 */
+
+  --danger: #ef4444; /* Red 500 */
+  --success: #22c55e; /* Green 500 */
+
+  --border: #334155; /* Slate 700 */
+
+  /* Spacing & Layout */
+  --sidebar-width: 260px;
+  --header-height: 64px;
+  --radius: 8px;
+  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  background-color: var(--bg-body);
+  color: var(--text-main);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--text-main);
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-body);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-input);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
