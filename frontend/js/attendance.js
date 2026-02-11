@@ -4,10 +4,10 @@
  */
 
 // Listen for the global employee load event to populate dropdowns
-window.addEventListener("employeesLoaded", (e) => {
-  const employees = e.detail;
-  populateEmployeeDropdown("att-employee-select", employees);
-});
+// window.addEventListener("employeesLoaded", (e) => {
+//   const employees = e.detail;
+//   populateEmployeeDropdown("att-employee-select", employees);
+// });
 
 function populateEmployeeDropdown(selectId, employees) {
   const select = document.getElementById(selectId);

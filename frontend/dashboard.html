@@ -72,6 +72,25 @@
               </div>
             </div>
           </div>
+          <div class="card" style="margin-top: 2rem">
+            <h3>Employees</h3>
+
+            <table class="table" style="margin-top: 1rem">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Role</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="dashboard-employee-list-body">
+                <tr>
+                  <td colspan="4" style="text-align: center">Loading...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </section>
 
         <!-- 2. EMPLOYEES SECTION -->
@@ -279,198 +298,85 @@
           </div>
         </section>
 
-        <div id="profile-list-view" class="card">
-          <h3>Select Employee</h3>
-          <table class="table" style="margin-top: 1rem">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Role</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="profile-employee-list-body">
-              <tr>
-                <td colspan="4" style="text-align: center">Loading...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
         <!-- 5. EMPLOYEE PROFILE SECTION (New) -->
-        <div id="profile-detail-view" style="display: none">
-          <button
-            onclick="backToEmployeeList()"
-            class="btn"
-            style="margin-bottom: 1rem"
-          >
-            ← Back
-          </button>
-        </div>
         <section id="employee-profile" class="section">
-          <div class="content-header">
-            <h2>Employee Profile</h2>
-            <p>Manage personal details and documents.</p>
+          <!-- LIST VIEW -->
+          <div id="profile-list-view" class="card">
+            <h3>Select Employee</h3>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Role</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="profile-employee-list-body">
+                <tr>
+                  <td colspan="4" style="text-align: center">Loading...</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
-          <!-- Employee Header Card -->
-          <div class="card">
-            <h3>Employee Details</h3>
-            <div
-              style="
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 1.5rem;
-                margin-top: 1rem;
-              "
+          <!-- DETAIL VIEW -->
+          <div id="profile-detail-view" style="display: none">
+            <button
+              onclick="backToEmployeeList()"
+              class="btn"
+              style="margin-bottom: 1rem"
             >
-              <div>
-                <label class="form-label">Employee ID</label>
-                <div
-                  id="profile-employee-id"
-                  class="value"
-                  style="color: var(--text-main); font-weight: bold"
-                >
-                  -
-                </div>
-              </div>
-              <div>
-                <label class="form-label">Full Name</label>
-                <div
-                  id="profile-name"
-                  class="value"
-                  style="color: var(--text-main)"
-                >
-                  -
-                </div>
-              </div>
-              <div>
-                <label class="form-label">Role</label>
-                <div
-                  id="profile-role"
-                  class="value"
-                  style="color: var(--text-main)"
-                >
-                  -
-                </div>
-              </div>
-              <div>
-                <label class="form-label">Phone Number</label>
-                <div
-                  id="profile-phone"
-                  class="value"
-                  style="color: var(--text-main)"
-                >
-                  -
-                </div>
-              </div>
-              <div>
-                <label class="form-label">Address</label>
-                <div
-                  id="profile-address"
-                  class="value"
-                  style="color: var(--text-main)"
-                >
-                  -
-                </div>
-              </div>
-              <div>
-                <label class="form-label">Status</label>
-                <div>
-                  <span id="profile-status" class="status-badge">Active</span>
-                </div>
-              </div>
-            </div>
-          </div>
+              ← Back
+            </button>
 
-          <!-- Documents Management Card -->
-          <div class="card">
-            <h3>Documents Management</h3>
-
-            <!-- Upload Form -->
-            <div
-              style="
-                margin-top: 1rem;
-                padding-bottom: 1.5rem;
-                border-bottom: 1px solid var(--border);
-              "
-            >
-              <h4
-                style="
-                  font-size: 0.95rem;
-                  color: var(--text-muted);
-                  margin-bottom: 1rem;
-                "
-              >
-                Upload New Document
-              </h4>
-              <form
-                style="
-                  display: grid;
-                  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                  gap: 1rem;
-                  align-items: end;
-                "
-              >
-                <div>
-                  <label class="form-label">Document Type</label>
-                  <select id="doc-type" class="form-control">
-                    <option value="Aadhaar">Aadhaar Card</option>
-                    <option value="PAN">PAN Card</option>
-                    <option value="Lab ID">Lab ID</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="form-label">Aadhaar Number</label>
-                  <input
-                    type="text"
-                    id="doc-aadhaar"
-                    class="form-control"
-                    placeholder="Enter Aadhaar No."
-                  />
-                </div>
-                <div>
-                  <label class="form-label">Select File</label>
-                  <input
-                    type="file"
-                    id="doc-file"
-                    class="form-control"
-                    style="padding: 0.5rem"
-                  />
-                </div>
-                <div>
-                  <button
-                    type="button"
-                    id="upload-doc-btn"
-                    class="btn btn-primary btn-block"
-                  >
-                    Upload
-                  </button>
-                </div>
-              </form>
+            <div class="card">
+              <h3>Employee Details</h3>
+              <div id="profile-content-area"></div>
             </div>
 
-            <!-- Documents Table -->
-            <div class="table-container" style="margin-top: 1.5rem">
+            <!-- DOCUMENT UPLOAD -->
+            <div class="card">
+              <h3>Upload Document</h3>
+
+              <div style="display: grid; gap: 1rem">
+                <select id="doc-type" class="form-control">
+                  <option value="Aadhaar">Aadhaar</option>
+                  <option value="PAN">PAN</option>
+                  <option value="Other">Other</option>
+                </select>
+
+                <input
+                  type="text"
+                  id="doc-aadhaar"
+                  class="form-control"
+                  placeholder="Aadhaar No"
+                />
+
+                <input type="file" id="doc-file" class="form-control" />
+
+                <button id="upload-doc-btn" class="btn btn-primary">
+                  Upload
+                </button>
+              </div>
+            </div>
+
+            <!-- DOCUMENT TABLE -->
+            <div class="card">
+              <h3>Documents</h3>
               <table class="table">
                 <thead>
                   <tr>
-                    <th>Document Type</th>
-                    <th>Aadhaar Number</th>
-                    <th>File Name</th>
+                    <th>Type</th>
+                    <th>Aadhaar</th>
+                    <th>File</th>
                     <th>Uploaded At</th>
-                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody id="employee-docs-body">
                   <tr>
-                    <td
-                      colspan="5"
-                      style="text-align: center; color: var(--text-muted)"
-                    >
-                      No documents uploaded yet.
+                    <td colspan="4" style="text-align: center">
+                      No documents uploaded.
                     </td>
                   </tr>
                 </tbody>
@@ -519,6 +425,14 @@
         };
         // Start fetching data
         loadEmployees();
+      }
+      function init() {
+        window.updateDashboardStats = function (count) {
+          document.getElementById("stat-total-emp").innerText = count;
+        };
+
+        loadEmployees();
+        loadDashboardEmployeeList();
       }
 
       init();

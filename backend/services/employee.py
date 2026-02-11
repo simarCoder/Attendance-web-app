@@ -37,7 +37,6 @@ def get_all_employees():
     cursor.execute("""
         SELECT employee_id, name, role, phone, address, monthly_salary, status
         FROM employees
-        WHERE status = 'active'
     """)
     rows = cursor.fetchall()
     cursor.close()

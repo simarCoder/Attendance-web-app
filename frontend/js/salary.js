@@ -95,13 +95,41 @@ function displaySalaryCard(data) {
                         ${formattedHours} hrs
                     </div>
                 </div>
-                <div>
-                    <label class="form-label">Total Payout</label>
-                    <div class="value" style="color: var(--success); font-size: 1.5rem; font-weight: bold;">
-                        ₹${data.total_salary}
-                    </div>
-                </div>
+            <div>
+              <label class="form-label">Total Payout</label>
+              ₹${
+                data.locked
+                  ? `<input type="number" value="${data.total_salary}" disabled class="form-control" />`
+                  : `
+                    <input type="number" id="editable-salary" value="${data.total_salary}" class="form-control" />
+                    <button onclick="saveEditedSalary(${data.employee_id}, '${data.month}')" 
+                            class="btn btn-primary" style="margin-top:10px;">
+                        Save Changes
+                    </button>
+                  `
+              }
+          </div>
+
             </div>
         </div>
     `;
+}
+
+function saveEditedSalary(empId, month) {
+  const newSalary = document.getElementById("editable-salary").value;
+
+  fetch(`${API_BASE}/salary/update`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      employee_id: empId,
+      month: month,
+      total_salary: parseFloat(newSalary),
+    }),
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      alert(data.message);
+      fetchSalaryView(empId, month);
+    });
 }

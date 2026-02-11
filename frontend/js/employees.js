@@ -25,7 +25,7 @@ async function loadEmployees() {
 }
 
 async function deactivateEmployee(id) {
-  if (!confirm("Mark this employee as inactive?")) return;
+  if (!confirm("Deactivate this employee?")) return;
 
   const response = await fetch(`${API_BASE}/employee/deactivate`, {
     method: "POST",
@@ -33,10 +33,25 @@ async function deactivateEmployee(id) {
     body: JSON.stringify({ employee_id: id }),
   });
 
-  const data = await response.json();
+  if (response.ok) {
+    loadEmployees();
+  } else {
+    alert("Failed to deactivate");
+  }
+}
 
-  alert(data.message);
-  loadEmployees();
+async function activateEmployee(id) {
+  const response = await fetch(`${API_BASE}/employee/activate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ employee_id: id }),
+  });
+
+  if (response.ok) {
+    loadEmployees();
+  } else {
+    alert("Failed to activate");
+  }
 }
 
 function renderEmployeeTable(employees) {
@@ -53,13 +68,32 @@ function renderEmployeeTable(employees) {
       <td>${emp.phone || "-"}</td>
       <td>${emp.address || "-"}</td>
       <td>₹${emp.monthly_salary}</td>
-      <td><span class="status-badge">Active</span></td>
       <td>
-        <button onclick="event.stopPropagation(); deactivateEmployee(${emp.id})"
-          style="background: var(--danger); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">
-          Delete
-        </button>
-      </td>
+  <span class="status-badge"
+        style="
+          background: ${emp.status === "active" ? "#16a34a" : "#fa6515c4"};
+          color: black;
+          padding: 4px 8px;
+          border-radius: 6px;
+        ">
+    ${emp.status}
+  </span>
+</td>
+
+      <td>
+  ${
+    emp.status === "active"
+      ? `<button class="btn btn-warning" 
+            onclick="deactivateEmployee(${emp.id})">
+            Deactivate
+          </button>`
+      : `<button class="btn btn-primary" 
+            onclick="activateEmployee(${emp.id})">
+            Activate
+          </button>`
+  }
+</td>
+
     `;
 
     // ✅ CLICK ROW TO OPEN PROFILE

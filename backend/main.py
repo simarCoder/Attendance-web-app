@@ -5,7 +5,7 @@ from flask_cors import CORS
 
 # ---DATABASE IMPORT---
 
-from backend.database import employee_db
+from backend.database import employee_db, get_connection
 
 # ---DOCUMENT IMPORTS---
 
@@ -88,6 +88,28 @@ def deactivate_employee_route():
     deactivate_employee(data.get("employee_id"))
     return jsonify({"message": "Employee deactivated"})
 
+
+@app.route("/employee/activate", methods=["POST"])
+def activate_employee_route():
+    data = request.json
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE employees
+        SET status = 'active'
+        WHERE employee_id = ?
+    """, (data.get("employee_id"),))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"message": "Employee activated"})
+
+
+
 @app.route("/employee/delete", methods=["POST"])
 def delete_employee_route():
     data = request.json
@@ -141,7 +163,7 @@ def generate_salary_route():
         return jsonify({"message": "Salary generated", "status": "new"})
     except Exception as e:
         if "already generated" in str(e):
-             return jsonify({"message": "Salary already generated", "status": "exists"}), 200
+            return jsonify({"message": "Salary already generated", "status": "exists"}), 200
         return jsonify({"message": str(e), "status": "error"}), 400
 
 @app.route("/salary/view", methods=["GET"])
@@ -157,8 +179,33 @@ def get_salary_route():
         "month": salary[0],
         "total_hours": salary[1],
         "hourly_rate": salary[2],
-        "total_salary": salary[3]
+        "total_salary": salary[3],
+        "locked": salary[4]
     })
+
+@app.route("/salary/update", methods=["POST"])
+def update_generated_salary_route():
+    data = request.json
+
+    employee_id = data.get("employee_id")
+    month = data.get("month")
+    new_salary = data.get("total_salary")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE salary_cal
+        SET total_salary = ?
+        WHERE employee_id = ? AND month = ? AND locked = 0
+    """, (new_salary, employee_id, month))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"message": "Salary updated successfully"})
+
 
 
 # -------------------------
