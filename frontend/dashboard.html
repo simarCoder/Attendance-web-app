@@ -32,10 +32,7 @@
             <span>Salary</span>
           </div>
           <!-- Updated Navigation Item -->
-          <div
-            class="nav-item"
-            onclick="switchSection('employee-profile', this)"
-          >
+          <div class="nav-item" onclick="openEmployeeDetailsSection(this)">
             <span>Employee Details</span>
           </div>
 
@@ -282,7 +279,35 @@
           </div>
         </section>
 
+        <div id="profile-list-view" class="card">
+          <h3>Select Employee</h3>
+          <table class="table" style="margin-top: 1rem">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="profile-employee-list-body">
+              <tr>
+                <td colspan="4" style="text-align: center">Loading...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
         <!-- 5. EMPLOYEE PROFILE SECTION (New) -->
+        <div id="profile-detail-view" style="display: none">
+          <button
+            onclick="backToEmployeeList()"
+            class="btn"
+            style="margin-bottom: 1rem"
+          >
+            ← Back
+          </button>
+        </div>
         <section id="employee-profile" class="section">
           <div class="content-header">
             <h2>Employee Profile</h2>
@@ -462,6 +487,7 @@
     <script src="js/employees.js"></script>
     <script src="js/attendance.js"></script>
     <script src="js/salary.js"></script>
+    <script src="js/employee_profile.js"></script>
 
     <!-- Inline Dashboard Control -->
     <script>

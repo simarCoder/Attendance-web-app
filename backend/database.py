@@ -68,7 +68,7 @@ def employee_db():
         total_hours REAL,
         hourly_rate_snapshot REAL,
         total_salary REAL,
-        locked INTEGER DEFAULT 1,
+        locked INTEGER DEFAULT 0,
         FOREIGN KEY (employee_id) REFERENCES employees(employee_id)   
             )
                 """)

@@ -24,29 +24,49 @@ async function loadEmployees() {
   }
 }
 
+async function deactivateEmployee(id) {
+  if (!confirm("Mark this employee as inactive?")) return;
+
+  const response = await fetch(`${API_BASE}/employee/deactivate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ employee_id: id }),
+  });
+
+  const data = await response.json();
+
+  alert(data.message);
+  loadEmployees();
+}
+
 function renderEmployeeTable(employees) {
   const tbody = document.getElementById("employee-table-body");
-
-  // Update Table Header if needed (optional, assuming header is static in HTML)
-  // Ensure your HTML table header in dashboard.html has an extra <th>Action</th> at the end
-  // But strictly speaking for this JS, we just append the column.
-
   tbody.innerHTML = "";
 
   employees.forEach((emp) => {
     const tr = document.createElement("tr");
+
     tr.innerHTML = `
-          <td>#${emp.id}</td>
-          <td>${emp.name}</td>
-          <td>${emp.role}</td>
-          <td>${emp.phone || "-"}</td>
-          <td>${emp.address || "-"}</td>
-          <td>₹${emp.monthly_salary}</td>
-          <td><span class="status-badge">Active</span></td>
-          <td>
-            <button onclick="deleteEmployee(${emp.id})" style="background: var(--danger); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">Delete</button>
-          </td>
-  `;
+      <td>#${emp.id}</td>
+      <td>${emp.name}</td>
+      <td>${emp.role}</td>
+      <td>${emp.phone || "-"}</td>
+      <td>${emp.address || "-"}</td>
+      <td>₹${emp.monthly_salary}</td>
+      <td><span class="status-badge">Active</span></td>
+      <td>
+        <button onclick="event.stopPropagation(); deactivateEmployee(${emp.id})"
+          style="background: var(--danger); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">
+          Delete
+        </button>
+      </td>
+    `;
+
+    // ✅ CLICK ROW TO OPEN PROFILE
+    tr.addEventListener("click", () => {
+      openEmployeeProfile(emp.id);
+    });
+
     tbody.appendChild(tr);
   });
 }

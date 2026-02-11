@@ -1,10 +1,17 @@
 from backend.database import get_connection
+from datetime import datetime
+import calendar
+
+
 
 def generate_salary(employee_id, month):
     """
     Generates salary for one employee for a given month (YYYY-MM).
     Uses salary_cal table.
     """
+
+
+    
     conn = get_connection()
     cursor = conn.cursor()
 

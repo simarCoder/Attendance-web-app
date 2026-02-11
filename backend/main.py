@@ -1,20 +1,36 @@
-from flask import Flask, request, jsonify
+import os
+
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+
+# ---DATABASE IMPORT---
+
 from backend.database import employee_db
+
+# ---DOCUMENT IMPORTS---
+
+from backend.services.documents import get_documents_by_employee, add_document
+
+# ---EMPLOYEE SERVICE IMPORT---
 
 from backend.services.employee import (
     add_employee,
     get_all_employees,
     update_monthly_salary,
     deactivate_employee,
-    delete_employee 
+    delete_employee,
+    get_employee_by_id
 )
+
+# ---ATTENDANCE IMPORT---
 
 from backend.services.attendance import (
     check_in,
     check_out,
     get_attendance_by_employee
 )
+
+# ---SALARY IMPORT---
 
 from backend.services.salary import (
     generate_salary,
@@ -143,6 +159,72 @@ def get_salary_route():
         "hourly_rate": salary[2],
         "total_salary": salary[3]
     })
+
+
+# -------------------------
+# EMPLOYEE DOCUMENT ROUTES
+# -------------------------
+
+@app.route("/employee/<int:employee_id>", methods=["GET"])
+def get_employee_profile(employee_id):
+    emp = get_employee_by_id(employee_id)
+    if not emp:
+        return jsonify({"error": "Employee not found"}), 404
+    return jsonify({
+        "id": emp[0],
+        "name": emp[1],
+        "role": emp[2],
+        "phone": emp[3],
+        "address": emp[4],
+        "monthly_salary": emp[5],
+        "status": emp[6]
+    })
+
+
+@app.route("/employee/<int:employee_id>/documents", methods=["GET"])
+def get_employee_documents(employee_id):
+    docs = get_documents_by_employee(employee_id)
+    result = []
+    for d in docs:
+        result.append({
+            "doc_type": d[0],
+            "adhaar_no": d[1],
+            "file_path": d[2],
+            "uploaded_at": d[3]
+        })
+    return jsonify(result)
+
+
+@app.route("/employee/<int:employee_id>/documents", methods=["POST"])
+def upload_employee_document(employee_id):
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+
+    file = request.files["file"]
+    doc_type = request.form.get("doc_type")
+    adhaar_no = request.form.get("adhaar_no")
+
+    if file.filename == "":
+        return jsonify({"error": "Empty file"}), 400
+
+    # Create employee folder
+    emp_folder = os.path.join("UPLOADS", f"employee_{employee_id}")
+    os.makedirs(emp_folder, exist_ok=True)
+
+    file_path = os.path.join(emp_folder, file.filename)
+    file.save(file_path)
+
+    # Save to DB
+    add_document(employee_id, doc_type, adhaar_no, file_path)
+
+    return jsonify({"message": "Document uploaded successfully"})
+
+
+@app.route('/UPLOADS/<path:filename>')
+def uploaded_file(filename):
+    return send_from_directory('UPLOADS', filename)
+
+
 
 if __name__ == "__main__":
     # FIX: use_reloader=False prevents server restart loop on DB write
