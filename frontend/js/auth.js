@@ -1,7 +1,6 @@
 /**
  * auth.js
  * Handles Login, Session Management, and Logout.
- * Fake authentication for frontend demo, stores flag in sessionStorage.
  */
 
 // Check if we are on the dashboard but not logged in
@@ -9,40 +8,54 @@ function checkAuth() {
   const isLoggedIn = sessionStorage.getItem("isLoggedIn");
   const path = window.location.pathname;
 
-  // If on dashboard and not logged in
   if (path.includes("dashboard.html") && isLoggedIn !== "true") {
     window.location.href = "login.html";
   }
 
-  // If on login and already logged in
   if (path.includes("login.html") && isLoggedIn === "true") {
     window.location.href = "dashboard.html";
   }
 }
 
-// Handle Login Form Submit
-function handleLogin(event) {
+async function handleLogin(event) {
   event.preventDefault();
 
-  const usernameInput = document.getElementById("username");
-  const passwordInput = document.getElementById("password");
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
 
-  // Fake Auth Check
-  if (usernameInput.value === "admin" && passwordInput.value === "admin") {
+  try {
+    const res = await fetch(`${API_BASE}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      // Use helper if available, otherwise fallback (for login page)
+      if (window.showToast) showToast(data.error || "Login failed", "error");
+      else alert(data.error || "Login failed");
+      return;
+    }
+
     sessionStorage.setItem("isLoggedIn", "true");
+    sessionStorage.setItem("role", data.role);
+    sessionStorage.setItem("user_id", data.user_id);
     window.location.href = "dashboard.html";
-  } else {
-    alert("Invalid credentials. Try admin / admin");
+  } catch (err) {
+    if (window.showToast) showToast("Server error", "error");
+    else alert("Server error");
   }
 }
 
-// Handle Logout
 function logout() {
-  if (confirm("Are you sure you want to logout?")) {
+  // Use Custom Modal
+  showConfirmModal("Are you sure you want to logout?", () => {
     sessionStorage.clear();
+    localStorage.clear();
     window.location.href = "login.html";
-  }
+  });
 }
 
-// Run auth check immediately
 checkAuth();

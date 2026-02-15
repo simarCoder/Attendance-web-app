@@ -41,7 +41,7 @@ function loadEmployeeProfile(employeeId) {
     })
     .catch((err) => {
       console.error(err);
-      alert("Failed to load profile");
+      if (window.showToast) showToast("Failed to load profile", "error");
     });
 }
 
@@ -61,7 +61,7 @@ function loadEmployeeDocuments(employeeId) {
       if (!docs || docs.length === 0) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="4" style="text-align:center;">
+            <td colspan="5" style="text-align:center;">
               No documents uploaded.
             </td>
           </tr>
@@ -69,16 +69,33 @@ function loadEmployeeDocuments(employeeId) {
         return;
       }
 
+      // Check privileges for VIEW/DELETE
+      const role = sessionStorage.getItem("role");
+      const hasPrivilege = ["admin", "head"].includes(role);
+
       docs.forEach((doc) => {
         const tr = document.createElement("tr");
-
         const fileName = doc.file_path.split("\\").pop().split("/").pop();
+
+        // Construct Actions
+        let actions = "-";
+        if (hasPrivilege) {
+          // VIEW BUTTON
+          const relativePath = doc.file_path.replace(/\\/g, "/");
+          const viewBtn = `<a href="${API_BASE}/${relativePath}" target="_blank" class="btn btn-primary" style="padding:4px 8px; font-size:0.8rem; text-decoration:none; margin-right: 5px;">View</a>`;
+
+          // DELETE BUTTON
+          const deleteBtn = `<button onclick="deleteDocument(${doc.doc_id})" class="btn" style="background:var(--danger); color:white; padding:4px 8px; font-size:0.8rem;">Delete</button>`;
+
+          actions = viewBtn + deleteBtn;
+        }
 
         tr.innerHTML = `
           <td>${doc.doc_type}</td>
           <td>${doc.adhaar_no || "-"}</td>
           <td>${fileName}</td>
           <td>${doc.uploaded_at}</td>
+          <td>${actions}</td>
         `;
 
         tbody.appendChild(tr);
@@ -86,7 +103,36 @@ function loadEmployeeDocuments(employeeId) {
     })
     .catch((err) => {
       console.error(err);
-      alert("Failed to load documents");
+      if (window.showToast) showToast("Failed to load documents", "error");
+    });
+}
+
+// DELETE DOCUMENT FUNCTION
+function deleteDocument(docId) {
+  if (window.showConfirmModal) {
+    showConfirmModal("Are you sure you want to delete this document?", () => {
+      executeDelete(docId);
+    });
+  } else {
+    if (confirm("Delete this document?")) executeDelete(docId);
+  }
+}
+
+function executeDelete(docId) {
+  fetch(`${API_BASE}/documents/delete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ doc_id: docId }),
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      if (window.showToast) showToast(data.message, "success");
+      // Reload list to see changes
+      loadEmployeeDocuments(CURRENT_EMPLOYEE_ID);
+    })
+    .catch((err) => {
+      console.error(err);
+      if (window.showToast) showToast("Error deleting document", "error");
     });
 }
 
@@ -166,7 +212,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (uploadBtn) {
     uploadBtn.addEventListener("click", () => {
       if (!CURRENT_EMPLOYEE_ID) {
-        alert("Select employee first");
+        if (window.showToast) showToast("Select employee first", "error");
         return;
       }
 
@@ -175,7 +221,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const fileInput = document.getElementById("doc-file");
 
       if (fileInput.files.length === 0) {
-        alert("Select a file");
+        if (window.showToast) showToast("Select a file", "error");
         return;
       }
 
@@ -190,13 +236,13 @@ document.addEventListener("DOMContentLoaded", () => {
       })
         .then((res) => res.json())
         .then(() => {
-          alert("Uploaded successfully");
+          if (window.showToast) showToast("Uploaded successfully", "success");
           fileInput.value = "";
           loadEmployeeDocuments(CURRENT_EMPLOYEE_ID);
         })
         .catch((err) => {
           console.error(err);
-          alert("Upload failed");
+          if (window.showToast) showToast("Upload failed", "error");
         });
     });
   }

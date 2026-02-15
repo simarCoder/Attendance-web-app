@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,10 +11,122 @@
     <link rel="stylesheet" href="css/components.css" />
   </head>
   <body>
+    <!-- FLOATING THEME TOGGLE (Desktop) -->
+    <button
+      id="desktop-theme-toggle"
+      class="theme-toggle-btn desktop-only"
+      onclick="toggleTheme()"
+      aria-label="Toggle Theme"
+    >
+      <!-- Sun Icon (Visible in Dark Mode) -->
+      <svg
+        class="icon-sun"
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <circle cx="12" cy="12" r="5" />
+        <path
+          d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+        />
+      </svg>
+      <!-- Moon Icon (Visible in Light Mode) -->
+      <svg
+        class="icon-moon"
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+      </svg>
+    </button>
+
+    <!-- MOBILE HEADER -->
+    <header class="mobile-header">
+      <button class="btn-icon" onclick="toggleSidebar()">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+      <span class="mobile-brand">HR System</span>
+      <button class="btn-icon" onclick="toggleTheme()">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="12" cy="12" r="5" />
+          <path
+            d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+          />
+        </svg>
+      </button>
+    </header>
+
+    <!-- MOBILE SIDEBAR OVERLAY -->
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- TOAST & MODAL -->
+    <div id="toast-container"></div>
+    <div id="custom-modal" class="modal-overlay">
+      <div class="modal-card">
+        <h3 style="margin-bottom: 0.5rem">Confirmation</h3>
+        <p id="modal-message" style="color: var(--text-muted)">Are you sure?</p>
+        <div class="modal-actions">
+          <button
+            class="btn"
+            style="background: var(--bg-input); color: var(--text-main)"
+            onclick="closeConfirmModal()"
+          >
+            Cancel
+          </button>
+          <button class="btn btn-primary" onclick="handleConfirmYes()">
+            Yes, Proceed
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="dashboard-container">
       <!-- Sidebar -->
-      <aside class="sidebar">
-        <div class="sidebar-header">HR Manager</div>
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <span>Attendance Manager</span>
+          <button class="btn-icon mobile-only" onclick="toggleSidebar()">
+            ✕
+          </button>
+        </div>
+
         <nav class="sidebar-nav">
           <div
             class="nav-item active"
@@ -31,9 +143,17 @@
           <div class="nav-item" onclick="switchSection('salary', this)">
             <span>Salary</span>
           </div>
-          <!-- Updated Navigation Item -->
           <div class="nav-item" onclick="openEmployeeDetailsSection(this)">
             <span>Employee Details</span>
+          </div>
+
+          <!-- SETTINGS (Hidden for Users) -->
+          <div
+            class="nav-item special-access-only"
+            style="display: none"
+            onclick="switchSection('settings', this)"
+          >
+            <span>Settings</span>
           </div>
 
           <div class="nav-item nav-item-logout" onclick="logout()">
@@ -44,13 +164,15 @@
 
       <!-- Main Content -->
       <main class="main-content">
-        <!-- 1. OVERVIEW SECTION -->
+        <!-- 1. OVERVIEW -->
         <section id="overview" class="section active">
           <div class="content-header">
-            <h2>Overview</h2>
-            <p>Welcome back, Administrator.</p>
+            <div>
+              <h2>Overview</h2>
+              <p>Welcome back, <span id="user-role-display">User</span>.</p>
+            </div>
           </div>
-
+          <!-- Stats -->
           <div class="stats-grid">
             <div class="card stat-card">
               <h3>Total Employees</h3>
@@ -72,35 +194,21 @@
               </div>
             </div>
           </div>
-          <div class="card" style="margin-top: 2rem">
-            <h3>Employees</h3>
-
-            <table class="table" style="margin-top: 1rem">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Role</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody id="dashboard-employee-list-body">
-                <tr>
-                  <td colspan="4" style="text-align: center">Loading...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
         </section>
 
-        <!-- 2. EMPLOYEES SECTION -->
+        <!-- 2. EMPLOYEES -->
         <section id="employees" class="section">
           <div class="content-header">
             <h2>Employee Management</h2>
             <p>Add and view staff details.</p>
           </div>
-
-          <div style="display: grid; grid-template-columns: 1fr; gap: 2rem">
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+              gap: 2rem;
+            "
+          >
             <!-- Add Form -->
             <div class="card">
               <h3>Add New Employee</h3>
@@ -171,7 +279,6 @@
                 </div>
               </form>
             </div>
-
             <!-- List Table -->
             <div class="card table-container">
               <h3>Employee Directory</h3>
@@ -196,16 +303,21 @@
           </div>
         </section>
 
-        <!-- 3. ATTENDANCE SECTION -->
+        <!-- 3. ATTENDANCE -->
         <section id="attendance" class="section">
           <div class="content-header">
             <h2>Attendance Tracking</h2>
-            <p>Manage daily check-ins and view history.</p>
           </div>
-
           <div class="card">
-            <div style="display: flex; gap: 1rem; align-items: flex-end">
-              <div style="flex: 1; max-width: 400px">
+            <div
+              style="
+                display: flex;
+                gap: 1rem;
+                align-items: flex-end;
+                flex-wrap: wrap;
+              "
+            >
+              <div style="flex: 1; min-width: 200px">
                 <label class="form-label">Select Employee</label>
                 <select id="att-employee-select" class="form-control">
                   <option>Loading...</option>
@@ -222,13 +334,16 @@
                 type="button"
                 onclick="handleCheckOut()"
                 class="btn"
-                style="background: var(--bg-input); color: white"
+                style="
+                  background: var(--bg-input);
+                  color: var(--text-main);
+                  border: 1px solid var(--border);
+                "
               >
                 Check Out
               </button>
             </div>
           </div>
-
           <div class="card table-container">
             <h3>Attendance Logs</h3>
             <table class="table" style="margin-top: 1rem">
@@ -254,13 +369,11 @@
           </div>
         </section>
 
-        <!-- 4. SALARY SECTION -->
+        <!-- 4. SALARY -->
         <section id="salary" class="section">
           <div class="content-header">
             <h2>Salary Generation</h2>
-            <p>Calculate monthly payouts based on attendance.</p>
           </div>
-
           <div class="card" style="max-width: 600px">
             <div class="form-group">
               <label class="form-label">Select Employee</label>
@@ -269,10 +382,14 @@
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Select Month</label>
-              <input type="month" id="salary-month" class="form-control" />
+              <label class="form-label">Select Period</label>
+              <div class="date-selector-group">
+                <span class="date-icon">📅</span>
+                <select id="salary-month-select" style="flex: 2"></select>
+                <div class="date-separator"></div>
+                <select id="salary-year-select" style="flex: 1"></select>
+              </div>
             </div>
-
             <div style="display: flex; gap: 1rem; margin-top: 1.5rem">
               <button
                 type="button"
@@ -286,21 +403,22 @@
                 type="button"
                 onclick="viewSalary()"
                 class="btn"
-                style="flex: 1; background: var(--border); color: white"
+                style="
+                  flex: 1;
+                  background: var(--bg-input);
+                  color: var(--text-main);
+                  border: 1px solid var(--border);
+                "
               >
                 View Slip
               </button>
             </div>
           </div>
-
-          <div id="salary-result-container" style="margin-top: 2rem">
-            <!-- Result Card will appear here -->
-          </div>
+          <div id="salary-result-container" style="margin-top: 2rem"></div>
         </section>
 
-        <!-- 5. EMPLOYEE PROFILE SECTION (New) -->
+        <!-- 5. EMPLOYEE PROFILE -->
         <section id="employee-profile" class="section">
-          <!-- LIST VIEW -->
           <div id="profile-list-view" class="card">
             <h3>Select Employee</h3>
             <table class="table">
@@ -319,32 +437,39 @@
               </tbody>
             </table>
           </div>
-
-          <!-- DETAIL VIEW -->
           <div id="profile-detail-view" style="display: none">
             <button
               onclick="backToEmployeeList()"
               class="btn"
-              style="margin-bottom: 1rem"
+              style="
+                margin-bottom: 1rem;
+                background: var(--bg-input);
+                color: var(--text-main);
+              "
             >
               ← Back
             </button>
-
             <div class="card">
               <h3>Employee Details</h3>
               <div id="profile-content-area"></div>
             </div>
-
-            <!-- DOCUMENT UPLOAD -->
             <div class="card">
               <h3>Upload Document</h3>
-
               <div style="display: grid; gap: 1rem">
                 <select id="doc-type" class="form-control">
                   <option value="Aadhaar">Aadhaar</option>
                   <option value="PAN">PAN</option>
                   <option value="Other">Other</option>
                 </select>
+
+                <!-- Hidden Input for Custom Document Type -->
+                <input
+                  type="text"
+                  id="doc-custom-type"
+                  class="form-control"
+                  placeholder="Enter Document Name (e.g. Driving License)"
+                  style="display: none"
+                />
 
                 <input
                   type="text"
@@ -353,31 +478,149 @@
                   placeholder="Aadhaar No"
                 />
 
-                <input type="file" id="doc-file" class="form-control" />
+                <div>
+                  <input
+                    type="file"
+                    id="doc-file"
+                    class="form-control"
+                    accept=".pdf, .jpg, .jpeg, .png"
+                  />
+                  <small
+                    style="
+                      color: var(--text-muted);
+                      display: block;
+                      margin-top: 5px;
+                      font-size: 0.85rem;
+                    "
+                  >
+                    Only images (.jpg, .png) or PDFs (.pdf) are allowed.
+                  </small>
+                </div>
 
                 <button id="upload-doc-btn" class="btn btn-primary">
                   Upload
                 </button>
               </div>
             </div>
-
-            <!-- DOCUMENT TABLE -->
             <div class="card">
               <h3>Documents</h3>
+              <div class="table-container">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Type</th>
+                      <th>Document No</th>
+                      <th>File</th>
+                      <th>Uploaded At</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="employee-docs-body">
+                    <tr>
+                      <td colspan="5" style="text-align: center">
+                        No documents uploaded.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 6. SETTINGS -->
+        <section id="settings" class="section">
+          <div class="content-header">
+            <h2>System Settings</h2>
+            <p>Advanced Configuration (Head/Admin Only)</p>
+          </div>
+
+          <div class="card" style="max-width: 500px">
+            <h3>Working Hours</h3>
+            <p
+              style="
+                color: var(--text-muted);
+                font-size: 0.9rem;
+                margin-bottom: 1rem;
+              "
+            >
+              Set the daily required hours for salary calculation.
+            </p>
+            <form onsubmit="saveWorkingHours(event)">
+              <div class="form-group">
+                <label class="form-label">Hours Per Day</label>
+                <input
+                  type="number"
+                  id="setting-hours"
+                  class="form-control"
+                  step="0.5"
+                  required
+                />
+              </div>
+              <button type="submit" class="btn btn-primary">
+                Save Changes
+              </button>
+            </form>
+          </div>
+
+          <div class="card head-only" style="max-width: 500px; display: none">
+            <h3>Add System User</h3>
+            <p
+              style="
+                color: var(--text-muted);
+                font-size: 0.9rem;
+                margin-bottom: 1rem;
+              "
+            >
+              Create new login credentials.
+            </p>
+            <form id="add-user-form" onsubmit="addSystemUser(event)">
+              <div class="form-group">
+                <label class="form-label">Username</label>
+                <input
+                  type="text"
+                  id="new-user-name"
+                  class="form-control"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Password</label>
+                <input
+                  type="password"
+                  id="new-user-pass"
+                  class="form-control"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Role</label>
+                <select id="new-user-role" class="form-control">
+                  <option value="user">User (Restricted)</option>
+                  <option value="admin">Admin</option>
+                  <option value="head">Head</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-warning">Create User</button>
+            </form>
+          </div>
+
+          <div class="card head-only" style="display: none; margin-top: 2rem">
+            <h3>User Management</h3>
+            <div class="table-container">
               <table class="table">
                 <thead>
                   <tr>
-                    <th>Type</th>
-                    <th>Aadhaar</th>
-                    <th>File</th>
-                    <th>Uploaded At</th>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Password</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
-                <tbody id="employee-docs-body">
+                <tbody id="system-users-table-body">
                   <tr>
-                    <td colspan="4" style="text-align: center">
-                      No documents uploaded.
-                    </td>
+                    <td colspan="5" style="text-align: center">Loading...</td>
                   </tr>
                 </tbody>
               </table>
@@ -389,47 +632,92 @@
 
     <!-- Javascript Modules -->
     <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/employees.js"></script>
     <script src="js/attendance.js"></script>
     <script src="js/salary.js"></script>
     <script src="js/employee_profile.js"></script>
+    <script src="js/settings.js"></script>
 
     <!-- Inline Dashboard Control -->
     <script>
-      // Set today's date in Overview
       document.getElementById("stat-date").innerText =
         new Date().toLocaleDateString();
 
-      // Section Switching Logic
+      // --- SIDEBAR LOGIC ---
+      function toggleSidebar() {
+        document.getElementById("sidebar").classList.toggle("active");
+        document.querySelector(".sidebar-overlay").classList.toggle("active");
+      }
+
+      // Close sidebar when clicking menu item on mobile
       function switchSection(sectionId, navElement) {
-        // Hide all sections
         document
           .querySelectorAll(".section")
           .forEach((el) => el.classList.remove("active"));
-        // Show target section
         document.getElementById(sectionId).classList.add("active");
 
-        // Update Sidebar Active State
         document
           .querySelectorAll(".nav-item")
           .forEach((el) => el.classList.remove("active"));
         if (navElement) navElement.classList.add("active");
+
+        if (sectionId === "settings") loadSettings();
+
+        // Close sidebar if on mobile
+        if (window.innerWidth <= 768) {
+          toggleSidebar();
+        }
       }
 
-      // Initial Load
-      function init() {
-        // Check if we need to update totals in UI helper
-        window.updateDashboardStats = function (count) {
-          document.getElementById("stat-total-emp").innerText = count;
-        };
-        // Start fetching data
-        loadEmployees();
+      // --- THEME LOGIC ---
+      function toggleTheme() {
+        const html = document.documentElement;
+        const current = html.getAttribute("data-theme");
+        const next = current === "dark" ? "light" : "dark";
+
+        html.setAttribute("data-theme", next);
+        localStorage.setItem("theme", next);
       }
+
+      // Initialize Theme
+      (function initTheme() {
+        const saved = localStorage.getItem("theme") || "dark";
+        document.documentElement.setAttribute("data-theme", saved);
+      })();
+
       function init() {
         window.updateDashboardStats = function (count) {
           document.getElementById("stat-total-emp").innerText = count;
         };
+
+        const role = sessionStorage.getItem("role");
+        document.getElementById("user-role-display").innerText = role
+          ? role.toUpperCase()
+          : "USER";
+
+        if (role === "admin" || role === "head") {
+          document
+            .querySelectorAll(".special-access-only")
+            .forEach((el) => (el.style.display = "flex"));
+          document
+            .querySelectorAll(".admin-only")
+            .forEach((el) => (el.style.display = "block"));
+        } else {
+          document
+            .querySelectorAll(".special-access-only")
+            .forEach((el) => (el.style.display = "none"));
+          document
+            .querySelectorAll(".admin-only")
+            .forEach((el) => (el.style.display = "none"));
+        }
+
+        if (role === "head") {
+          document
+            .querySelectorAll(".head-only")
+            .forEach((el) => (el.style.display = "block"));
+        }
 
         loadEmployees();
         loadDashboardEmployeeList();

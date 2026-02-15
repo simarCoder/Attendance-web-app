@@ -3,8 +3,6 @@
  * Handles fetching, displaying, and adding employees.
  */
 
-// const API_BASE = 'http://127.0.0.1:5000'; // Leave empty for relative paths or set http://localhost:5000
-
 async function loadEmployees() {
   try {
     const response = await fetch(`${API_BASE}/employees`);
@@ -12,35 +10,52 @@ async function loadEmployees() {
 
     const employees = await response.json();
     renderEmployeeTable(employees);
-    updateDashboardStats(employees.length); // Update total count
+    updateDashboardStats(employees.length);
 
-    // Dispatch event so other modules (attendance/salary) can update their dropdowns
     const event = new CustomEvent("employeesLoaded", { detail: employees });
     window.dispatchEvent(event);
   } catch (error) {
     console.error("Error loading employees:", error);
-    // Fallback for UI demo if backend is offline
     renderEmptyState("employee-table-body", "No connection to backend.");
   }
 }
 
-async function deactivateEmployee(id) {
-  if (!confirm("Deactivate this employee?")) return;
+function deactivateEmployee(id, event) {
+  if (event) event.stopPropagation();
 
-  const response = await fetch(`${API_BASE}/employee/deactivate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ employee_id: id }),
-  });
-
-  if (response.ok) {
-    loadEmployees();
-  } else {
-    alert("Failed to deactivate");
+  // Role check handled by server mainly, but also UI check
+  const role = sessionStorage.getItem("role");
+  if (!["admin", "head"].includes(role)) {
+    showToast("Access Denied", "error");
+    return;
   }
+
+  showConfirmModal("Deactivate this employee account?", async () => {
+    const response = await fetch(`${API_BASE}/employee/deactivate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ employee_id: id }),
+    });
+
+    if (response.ok) {
+      showToast("Employee Deactivated", "success");
+      loadEmployees();
+    } else {
+      showToast("Failed to deactivate", "error");
+    }
+  });
 }
 
-async function activateEmployee(id) {
+async function activateEmployee(id, event) {
+  if (event) event.stopPropagation();
+
+  // Only Admin or Head can activate
+  const role = sessionStorage.getItem("role");
+  if (!["admin", "head"].includes(role)) {
+    showToast("Access Denied. Only Admin/Head can activate.", "error");
+    return;
+  }
+
   const response = await fetch(`${API_BASE}/employee/activate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -48,18 +63,69 @@ async function activateEmployee(id) {
   });
 
   if (response.ok) {
+    showToast("Employee Activated", "success");
     loadEmployees();
   } else {
-    alert("Failed to activate");
+    showToast("Failed to activate", "error");
   }
+}
+
+async function deleteEmployee(id, event) {
+  if (event) event.stopPropagation();
+
+  // Only Admin or Head can delete
+  const role = sessionStorage.getItem("role");
+  if (!["admin", "head"].includes(role)) {
+    showToast("Access Denied.", "error");
+    return;
+  }
+
+  showConfirmModal(
+    "PERMANENTLY DELETE this employee? All data will be lost.",
+    async () => {
+      const response = await fetch(`${API_BASE}/employee/delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employee_id: id }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        showToast(data.message, "success");
+        loadEmployees();
+      } else {
+        showToast("Error: " + data.message, "error");
+      }
+    },
+  );
 }
 
 function renderEmployeeTable(employees) {
   const tbody = document.getElementById("employee-table-body");
   tbody.innerHTML = "";
 
+  const currentUserRole = sessionStorage.getItem("role");
+  const canModify = ["admin", "head"].includes(currentUserRole);
+
   employees.forEach((emp) => {
     const tr = document.createElement("tr");
+
+    // Action Buttons Logic
+    let actionButtons = "";
+
+    // 1. Activate/Deactivate (Only Admin/Head)
+    if (canModify) {
+      if (emp.status === "active") {
+        actionButtons += `<button class="btn btn-warning" style="padding:4px 8px; margin-right:5px;" onclick="deactivateEmployee(${emp.id}, event)">Deactivate</button>`;
+      } else {
+        actionButtons += `<button class="btn btn-primary" style="padding:4px 8px; margin-right:5px;" onclick="activateEmployee(${emp.id}, event)">Activate</button>`;
+      }
+
+      // 2. Delete (Only Admin/Head)
+      actionButtons += `<button class="btn" style="background:#ef4444; color:white; padding:4px 8px;" onclick="deleteEmployee(${emp.id}, event)">Delete</button>`;
+    } else {
+      actionButtons = `<span style="color:var(--text-muted); font-size:0.8rem;">Read Only</span>`;
+    }
 
     tr.innerHTML = `
       <td>#${emp.id}</td>
@@ -69,34 +135,19 @@ function renderEmployeeTable(employees) {
       <td>${emp.address || "-"}</td>
       <td>₹${emp.monthly_salary}</td>
       <td>
-  <span class="status-badge"
-        style="
-          background: ${emp.status === "active" ? "#16a34a" : "#fa6515c4"};
-          color: black;
-          padding: 4px 8px;
-          border-radius: 6px;
-        ">
-    ${emp.status}
-  </span>
-</td>
-
-      <td>
-  ${
-    emp.status === "active"
-      ? `<button class="btn btn-warning" 
-            onclick="deactivateEmployee(${emp.id})">
-            Deactivate
-          </button>`
-      : `<button class="btn btn-primary" 
-            onclick="activateEmployee(${emp.id})">
-            Activate
-          </button>`
-  }
-</td>
-
+        <span class="status-badge"
+              style="
+                background: ${emp.status === "active" ? "#16a34a" : "#fa6515c4"};
+                color: black;
+                padding: 4px 8px;
+                border-radius: 6px;
+              ">
+          ${emp.status}
+        </span>
+      </td>
+      <td>${actionButtons}</td>
     `;
 
-    // ✅ CLICK ROW TO OPEN PROFILE
     tr.addEventListener("click", () => {
       openEmployeeProfile(emp.id);
     });
@@ -110,8 +161,8 @@ async function addEmployee(event) {
 
   const name = document.getElementById("emp-name").value;
   const role = document.getElementById("emp-role").value;
-  const phone = document.getElementById("emp-contact").value; // ✅ FIX
-  const address = document.getElementById("emp-address").value; // ✅ FIX
+  const phone = document.getElementById("emp-contact").value;
+  const address = document.getElementById("emp-address").value;
   const salary = document.getElementById("emp-salary").value;
 
   const payload = {
@@ -130,46 +181,16 @@ async function addEmployee(event) {
     });
 
     if (response.ok) {
-      alert("Employee added successfully");
+      showToast("Employee added successfully", "success");
       document.getElementById("add-employee-form").reset();
       loadEmployees();
     } else {
       const err = await response.json();
-      alert(err.message || "Error adding employee");
+      showToast(err.message || "Error adding employee", "error");
     }
   } catch (error) {
     console.error("Add employee failed:", error);
-    alert("Failed to connect to server");
-  }
-}
-
-async function deleteEmployee(id) {
-  if (
-    !confirm(
-      "Are you sure you want to permanently delete this employee? All attendance and salary data will be lost.",
-    )
-  ) {
-    return;
-  }
-
-  try {
-    const response = await fetch(`${API_BASE}/employee/delete`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ employee_id: id }),
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      alert(data.message);
-      loadEmployees(); // Refresh list
-    } else {
-      alert("Error: " + data.message);
-    }
-  } catch (error) {
-    console.error("Error:", error);
-    alert("Server connection failed");
+    showToast("Failed to connect to server", "error");
   }
 }
 
