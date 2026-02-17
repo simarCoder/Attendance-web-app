@@ -13,10 +13,70 @@ function loadSettings() {
     })
     .catch((err) => console.error(err));
 
-  // 2. Load System Users (Head Only)
+  // 2. Load System Users & Renewal Date (Head Only)
   const role = sessionStorage.getItem("role");
   if (role === "head") {
     loadSystemUsers();
+    loadRenewalDate();
+  }
+}
+
+async function triggerDatabaseBackup() {
+  try {
+    const btn = document.querySelector(
+      'button[onclick="triggerDatabaseBackup()"]',
+    );
+    const origText = btn.innerText;
+    btn.innerText = "Backing up...";
+    btn.disabled = true;
+
+    const res = await fetch(`${API_BASE}/settings/backup`, { method: "POST" });
+    const data = await res.json();
+
+    if (res.ok) {
+      if (window.showToast) showToast("Backup Successful!", "success");
+    } else {
+      if (window.showToast) showToast(data.message, "error");
+    }
+
+    btn.innerText = origText;
+    btn.disabled = false;
+  } catch (err) {
+    console.error(err);
+    if (window.showToast) showToast("Backup failed: Connection error", "error");
+  }
+}
+
+async function loadRenewalDate() {
+  try {
+    const res = await fetch(`${API_BASE}/settings/renewal`);
+    const data = await res.json();
+    if (data.date) {
+      document.getElementById("setting-renewal-date").value = data.date;
+    }
+  } catch (err) {
+    console.error("Renewal date load error", err);
+  }
+}
+
+async function saveRenewalDate(event) {
+  event.preventDefault();
+  const date = document.getElementById("setting-renewal-date").value;
+
+  try {
+    const res = await fetch(`${API_BASE}/settings/renewal`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date: date }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      if (window.showToast) showToast(data.message, "success");
+    } else {
+      if (window.showToast) showToast(data.message, "error");
+    }
+  } catch (err) {
+    if (window.showToast) showToast("Server error", "error");
   }
 }
 

@@ -1,6 +1,9 @@
 import os
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
+import sys
+from flask import Flask, request, jsonify, render_template, url_for, send_from_directory
+
+# --- UTILS ---
+from backend.utils.security import is_subscription_active, decrypt_date
 
 # ---DATABASE IMPORT---
 from backend.database import employee_db, get_connection
@@ -44,29 +47,64 @@ from backend.services.settings import (
     add_system_user,
     get_all_system_users,
     update_user_password,
-    delete_system_user
+    delete_system_user,
+    update_subscription_expiry,
+    get_subscription_expiry_encrypted,
+    create_database_backup 
 )
 
-app = Flask(__name__)
-CORS(app)
+# ---------------------------------------------------------
+# PATH CONFIGURATION (CRITICAL FIX)
+# ---------------------------------------------------------
+# Check if running as a PyInstaller OneFile executable
+if getattr(sys, 'frozen', False):
+    # FROZEN (EXE) MODE
+    # BASE_DIR: Location of EXE (for DB/Uploads persistence)
+    BASE_DIR = os.path.dirname(sys.executable)
+    
+    # INTERNAL_DIR: Temp folder for assets (Templates/Static)
+    INTERNAL_DIR = sys._MEIPASS
+    template_folder = os.path.join(INTERNAL_DIR, 'templates')
+    static_folder = os.path.join(INTERNAL_DIR, 'static')
+    
+    app = Flask(__name__, template_folder=template_folder, static_folder=static_folder)
+else:
+    # DEVELOPMENT MODE
+    # Your app.py is in /backend, but templates are in /templates (Root)
+    current_dir = os.path.dirname(os.path.abspath(__file__)) # .../backend
+    project_root = os.path.abspath(os.path.join(current_dir, '..')) # .../ (root)
+    
+    # Explicitly tell Flask where to find folders in the Root
+    template_folder = os.path.join(project_root, 'templates')
+    static_folder = os.path.join(project_root, 'static')
+    
+    # BASE_DIR for Uploads (Project Root)
+    BASE_DIR = project_root
+    
+    app = Flask(__name__, template_folder=template_folder, static_folder=static_folder)
 
-# Initialize DB
-employee_db()
-
-# Define Absolute Path for Uploads
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+# Configure Uploads
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'UPLOADS')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+# Initialize DB (Ensures tables exist on startup)
+employee_db()
+
 # -------------------------
-# BASIC HEALTH CHECK
+# VIEW ROUTES (Render HTML)
 # -------------------------
 @app.route("/")
 def home():
-    return "Attendance & Salary System Running"
+    """Renders the Login Page"""
+    return render_template("login.html")
+
+@app.route("/dashboard")
+def dashboard():
+    """Renders the Main Dashboard"""
+    return render_template("dashboard.html")
 
 # -------------------------
-# LOGIN ROUTES
+# AUTH ROUTES
 # -------------------------
 @app.route("/login", methods=["POST"])
 def login_route():
@@ -84,16 +122,27 @@ def login_route():
     """, (username, password))
 
     user = cursor.fetchone()
-
     cursor.close()
     conn.close()
 
     if not user:
         return jsonify({"error": "Invalid credentials"}), 401
 
+    user_id, role = user
+
+    if role != 'head':
+        encrypted_expiry = get_subscription_expiry_encrypted()
+        is_active, expiry_str = is_subscription_active(encrypted_expiry)
+        
+        if not is_active:
+            return jsonify({
+                "error": "SUBSCRIPTION EXPIRED",
+                "message": f"License expired on {expiry_str}. Please contact the Developer to renew."
+            }), 403
+
     return jsonify({
-        "user_id": user[0],
-        "role": user[1]
+        "user_id": user_id,
+        "role": role
     })
 
 # -------------------------
@@ -214,7 +263,6 @@ def attendance_view_route(employee_id):
 def generate_salary_route():
     data = request.json
     try:
-        # Pass Role to allow Head Override
         generate_salary(data.get("employee_id"), data.get("month"), data.get("role"))
         return jsonify({"message": "Salary generated", "status": "new"})
     except Exception as e:
@@ -260,18 +308,13 @@ def update_generated_salary_route():
 def get_employee_documents_route(employee_id):
     docs = get_documents_by_employee(employee_id)
     result = []
-    
     for d in docs:
         doc_id = d[0]
         file_path_db = d[3]
-        
-        # Auto-Cleanup
+        # Resolve path relative to the persistent UPLOAD folder
         abs_path = os.path.join(BASE_DIR, file_path_db)
         if not os.path.exists(abs_path):
-            print(f"⚠️ File missing for doc #{doc_id}, auto-cleaning record.")
-            delete_document_record(doc_id)
-            continue
-            
+            pass 
         result.append({
             "doc_id": d[0],
             "doc_type": d[1],
@@ -285,22 +328,22 @@ def get_employee_documents_route(employee_id):
 def upload_employee_document(employee_id):
     if "file" not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
-
     file = request.files["file"]
     doc_type = request.form.get("doc_type")
     adhaar_no = request.form.get("adhaar_no")
-
     if file.filename == "":
         return jsonify({"error": "Empty file"}), 400
-
-    emp_folder = os.path.join(UPLOAD_FOLDER, f"employee_{employee_id}")
+    
+    # Save physical file
+    emp_folder_name = f"employee_{employee_id}"
+    emp_folder = os.path.join(UPLOAD_FOLDER, emp_folder_name)
     os.makedirs(emp_folder, exist_ok=True)
     
     file_path = os.path.join(emp_folder, file.filename)
     file.save(file_path)
-
-    db_path = os.path.join("UPLOADS", f"employee_{employee_id}", file.filename)
     
+    # Save DB record (Relative path for portability)
+    db_path = os.path.join("UPLOADS", emp_folder_name, file.filename)
     add_document(employee_id, doc_type, adhaar_no, db_path)
     return jsonify({"message": "Document uploaded successfully"})
 
@@ -308,32 +351,26 @@ def upload_employee_document(employee_id):
 def delete_document_route_api():
     data = request.json
     doc_id = data.get("doc_id")
-    
-    if not doc_id:
-        return jsonify({"error": "Missing Doc ID"}), 400
-        
     doc = get_document_by_id(doc_id)
     if not doc:
         return jsonify({"message": "Document not found"}), 404
-        
     file_path_db = doc[0]
     delete_document_record(doc_id)
-    
     try:
         abs_path = os.path.join(BASE_DIR, file_path_db)
         if os.path.exists(abs_path):
             os.remove(abs_path)
     except Exception as e:
         print(f"Error deleting file: {e}")
-        
     return jsonify({"message": "Document deleted successfully"})
 
 @app.route('/UPLOADS/<path:filename>')
 def uploaded_file(filename):
+    # Serve from the persistent UPLOAD_FOLDER defined at top
     return send_from_directory(UPLOAD_FOLDER, filename)
 
 # -------------------------
-# SETTINGS ROUTES
+# SETTINGS & RENEWAL ROUTES
 # -------------------------
 @app.route("/settings/hours", methods=["GET"])
 def get_hours_route():
@@ -350,6 +387,14 @@ def update_hours_route():
         return jsonify({"message": "Working hours updated"})
     except Exception as e:
         return jsonify({"message": str(e)}), 400
+
+@app.route("/settings/backup", methods=["POST"])
+def backup_db_route():
+    try:
+        filename = create_database_backup()
+        return jsonify({"message": f"Backup created successfully: {filename}"})
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500
 
 @app.route("/users/add", methods=["POST"])
 def add_user_route():
@@ -387,5 +432,21 @@ def delete_user_route():
     except Exception as e:
         return jsonify({"message": str(e)}), 400
 
+@app.route("/settings/renewal", methods=["GET"])
+def get_renewal_route():
+    enc = get_subscription_expiry_encrypted()
+    if enc:
+        return jsonify({"date": decrypt_date(enc)})
+    return jsonify({"date": None})
+
+@app.route("/settings/renewal", methods=["POST"])
+def update_renewal_route():
+    data = request.json
+    try:
+        update_subscription_expiry(data.get("date"))
+        return jsonify({"message": "Subscription renewed successfully"})
+    except Exception as e:
+        return jsonify({"message": str(e)}), 400
+
 if __name__ == "__main__":
-    app.run(debug=True, use_reloader=False)
+    app.run(host="127.0.0.1", port=5000)

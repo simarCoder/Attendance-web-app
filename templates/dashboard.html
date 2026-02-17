@@ -5,10 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dashboard | HR System</title>
 
-    <!-- CSS -->
-    <link rel="stylesheet" href="css/theme.css" />
-    <link rel="stylesheet" href="css/layout.css" />
-    <link rel="stylesheet" href="css/components.css" />
+    <!-- CSS (Converted to Jinja2) -->
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/theme.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/layout.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/components.css') }}"
+    />
   </head>
   <body>
     <!-- FLOATING THEME TOGGLE (Desktop) -->
@@ -18,7 +27,6 @@
       onclick="toggleTheme()"
       aria-label="Toggle Theme"
     >
-      <!-- Sun Icon (Visible in Dark Mode) -->
       <svg
         class="icon-sun"
         xmlns="http://www.w3.org/2000/svg"
@@ -36,7 +44,6 @@
           d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
         />
       </svg>
-      <!-- Moon Icon (Visible in Light Mode) -->
       <svg
         class="icon-moon"
         xmlns="http://www.w3.org/2000/svg"
@@ -303,69 +310,126 @@
           </div>
         </section>
 
-        <!-- 3. ATTENDANCE -->
+        <!-- 3. ATTENDANCE (UPDATED LAYOUT) -->
         <section id="attendance" class="section">
           <div class="content-header">
             <h2>Attendance Tracking</h2>
           </div>
-          <div class="card">
-            <div
-              style="
-                display: flex;
-                gap: 1rem;
-                align-items: flex-end;
-                flex-wrap: wrap;
-              "
-            >
-              <div style="flex: 1; min-width: 200px">
-                <label class="form-label">Select Employee</label>
-                <select id="att-employee-select" class="form-control">
-                  <option>Loading...</option>
-                </select>
-              </div>
-              <button
-                type="button"
-                onclick="handleCheckIn()"
-                class="btn btn-primary"
-              >
-                Check In
-              </button>
-              <button
-                type="button"
-                onclick="handleCheckOut()"
-                class="btn"
+
+          <!-- Wrapper to stack items vertically -->
+          <div style="display: flex; flex-direction: column; gap: 2rem">
+            <!-- 1. Individual Check-In Card -->
+            <div class="card">
+              <h3>Individual Entry</h3>
+              <div
                 style="
-                  background: var(--bg-input);
-                  color: var(--text-main);
-                  border: 1px solid var(--border);
+                  display: flex;
+                  gap: 1rem;
+                  align-items: flex-end;
+                  flex-wrap: wrap;
+                  margin-top: 1rem;
                 "
               >
-                Check Out
-              </button>
+                <div style="flex: 1; min-width: 250px">
+                  <label class="form-label">Select Employee</label>
+                  <select id="att-employee-select" class="form-control">
+                    <option>Loading...</option>
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  onclick="handleCheckIn()"
+                  class="btn btn-primary"
+                >
+                  Check In
+                </button>
+                <button
+                  type="button"
+                  onclick="handleCheckOut()"
+                  class="btn"
+                  style="
+                    background: var(--bg-input);
+                    color: var(--text-main);
+                    border: 1px solid var(--border);
+                  "
+                >
+                  Check Out
+                </button>
+              </div>
             </div>
-          </div>
-          <div class="card table-container">
-            <h3>Attendance Logs</h3>
-            <table class="table" style="margin-top: 1rem">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Check In</th>
-                  <th>Check Out</th>
-                  <th>Worked Hours</th>
-                </tr>
-              </thead>
-              <tbody id="attendance-table-body">
-                <tr>
-                  <td
-                    colspan="4"
-                    style="text-align: center; color: var(--text-muted)"
-                  >
-                    Select an employee to view logs
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+
+            <!-- 2. Individual Logs Table -->
+            <div class="card table-container">
+              <h3>Individual Logs</h3>
+              <table class="table" style="margin-top: 1rem">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Check In</th>
+                    <th>Check Out</th>
+                    <th>Worked Hours</th>
+                  </tr>
+                </thead>
+                <tbody id="attendance-table-body">
+                  <tr>
+                    <td
+                      colspan="4"
+                      style="text-align: center; color: var(--text-muted)"
+                    >
+                      Select an employee to view logs
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- 3. NEW: Bulk Attendance Card -->
+            <div class="card">
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  margin-bottom: 1rem;
+                "
+              >
+                <h3>Bulk Attendance (Today)</h3>
+                <button
+                  id="bulk-mark-btn"
+                  class="btn btn-primary"
+                  onclick="submitBulkAttendance()"
+                  disabled
+                >
+                  Mark Present (0)
+                </button>
+              </div>
+              <div class="table-container">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th style="width: 50px; text-align: center">
+                        <input
+                          type="checkbox"
+                          id="bulk-check-all"
+                          onchange="toggleAllBulkChecks(this)"
+                        />
+                      </th>
+                      <th>ID</th>
+                      <th>Name</th>
+                      <th>Role</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="bulk-attendance-body">
+                    <tr>
+                      <td colspan="5" style="text-align: center">
+                        Loading employees...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -535,6 +599,41 @@
             <p>Advanced Configuration (Head/Admin Only)</p>
           </div>
 
+          <!-- SaaS Renewal (Head Only) -->
+          <div
+            class="card head-only"
+            style="
+              max-width: 500px;
+              display: none;
+              border: 1px solid var(--primary);
+            "
+          >
+            <h3 style="color: var(--primary)">SaaS Subscription Renewal</h3>
+            <p
+              style="
+                color: var(--text-muted);
+                font-size: 0.9rem;
+                margin-bottom: 1rem;
+              "
+            >
+              Set the software expiration date.
+            </p>
+            <form onsubmit="saveRenewalDate(event)">
+              <div class="form-group">
+                <label class="form-label">New Expiry Date</label>
+                <input
+                  type="date"
+                  id="setting-renewal-date"
+                  class="form-control"
+                  required
+                />
+              </div>
+              <button type="submit" class="btn btn-primary">
+                Renew Subscription
+              </button>
+            </form>
+          </div>
+
           <div class="card" style="max-width: 500px">
             <h3>Working Hours</h3>
             <p
@@ -561,6 +660,28 @@
                 Save Changes
               </button>
             </form>
+          </div>
+
+          <!-- BACKUP BUTTON -->
+          <div class="card" style="max-width: 500px">
+            <h3>Database Backup</h3>
+            <p
+              style="
+                color: var(--text-muted);
+                font-size: 0.9rem;
+                margin-bottom: 1rem;
+              "
+            >
+              Create a secure copy of the current database.
+            </p>
+            <button
+              type="button"
+              class="btn"
+              style="background: var(--success); color: white; width: 100%"
+              onclick="triggerDatabaseBackup()"
+            >
+              Create Backup Now
+            </button>
           </div>
 
           <div class="card head-only" style="max-width: 500px; display: none">
@@ -630,15 +751,17 @@
       </main>
     </div>
 
-    <!-- Javascript Modules -->
-    <script src="js/config.js"></script>
-    <script src="js/utils.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/employees.js"></script>
-    <script src="js/attendance.js"></script>
-    <script src="js/salary.js"></script>
-    <script src="js/employee_profile.js"></script>
-    <script src="js/settings.js"></script>
+    <!-- Javascript Modules (Converted to Jinja2) -->
+    <script src="{{ url_for('static', filename='js/config.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/employees.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/attendance.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/salary.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/employee_profile.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/bulk_attendance.js') }}"></script>
+    <!-- New Script -->
 
     <!-- Inline Dashboard Control -->
     <script>
@@ -664,6 +787,7 @@
         if (navElement) navElement.classList.add("active");
 
         if (sectionId === "settings") loadSettings();
+        if (sectionId === "attendance") loadBulkAttendanceList(); // Load Bulk Data
 
         // Close sidebar if on mobile
         if (window.innerWidth <= 768) {

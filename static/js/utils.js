@@ -5,7 +5,6 @@
 
 // --- TOAST NOTIFICATIONS ---
 function showToast(message, type = "success") {
-  // Ensure container exists
   let container = document.getElementById("toast-container");
   if (!container) {
     container = document.createElement("div");
@@ -19,7 +18,6 @@ function showToast(message, type = "success") {
 
   container.appendChild(toast);
 
-  // Remove after 3 seconds
   setTimeout(() => {
     toast.style.animation = "fadeOut 0.3s ease-out forwards";
     setTimeout(() => {
@@ -52,6 +50,27 @@ function handleConfirmYes() {
   closeConfirmModal();
 }
 
+// --- SHARED HELPERS ---
+
+/**
+ * Populates a select dropdown with employee options.
+ * Used by Attendance and Salary modules.
+ */
+function populateEmployeeDropdown(selectId, employees) {
+  const select = document.getElementById(selectId);
+  if (!select) return;
+
+  select.innerHTML = '<option value="">Select Employee...</option>';
+
+  employees.forEach((emp) => {
+    const option = document.createElement("option");
+    option.value = emp.id || emp.employee_id;
+    option.textContent = `${emp.name} (${emp.role})`;
+    select.appendChild(option);
+  });
+}
+
 // Expose to window
 window.showToast = showToast;
 window.showConfirmModal = showConfirmModal;
+window.populateEmployeeDropdown = populateEmployeeDropdown;

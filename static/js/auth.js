@@ -8,12 +8,13 @@ function checkAuth() {
   const isLoggedIn = sessionStorage.getItem("isLoggedIn");
   const path = window.location.pathname;
 
-  if (path.includes("dashboard.html") && isLoggedIn !== "true") {
-    window.location.href = "login.html";
+  // Flask routes now use clean paths / and /dashboard (no .html)
+  if (path === "/dashboard" && isLoggedIn !== "true") {
+    window.location.href = "/";
   }
 
-  if (path.includes("login.html") && isLoggedIn === "true") {
-    window.location.href = "dashboard.html";
+  if (path === "/" && isLoggedIn === "true") {
+    window.location.href = "/dashboard";
   }
 }
 
@@ -42,7 +43,7 @@ async function handleLogin(event) {
     sessionStorage.setItem("isLoggedIn", "true");
     sessionStorage.setItem("role", data.role);
     sessionStorage.setItem("user_id", data.user_id);
-    window.location.href = "dashboard.html";
+    window.location.href = "/dashboard";
   } catch (err) {
     if (window.showToast) showToast("Server error", "error");
     else alert("Server error");
@@ -54,7 +55,7 @@ function logout() {
   showConfirmModal("Are you sure you want to logout?", () => {
     sessionStorage.clear();
     localStorage.clear();
-    window.location.href = "login.html";
+    window.location.href = "/";
   });
 }
 

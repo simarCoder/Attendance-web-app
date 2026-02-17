@@ -1,6 +1,21 @@
 import sqlite3
+import os
+import sys
 
-DB_PATH = "db/attendance.db"
+# ---------------------------------------------------------
+# PATH LOGIC FOR PYINSTALLER
+# ---------------------------------------------------------
+if getattr(sys, 'frozen', False):
+    # If frozen, DB should be next to executable
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    # If Dev, assuming file is in /backend/database.py, go up one level
+    BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+DB_FOLDER = os.path.join(BASE_DIR, "db")
+os.makedirs(DB_FOLDER, exist_ok=True)
+DB_PATH = os.path.join(DB_FOLDER, "attendance.db")
+
 
 def get_connection():
     conn = sqlite3.connect(DB_PATH)
