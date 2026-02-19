@@ -258,3 +258,33 @@
     display: none !important;
   }
 }
+
+/* --- STACK LAYOUT FOR VERTICAL SECTIONS --- */
+.section-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* --- DEMO MODE LAYOUT ADJUSTMENTS --- */
+/* When demo banner exists, push everything down by 40px (banner height) */
+body:has(.demo-banner) {
+  padding-top: 40px;
+}
+
+body:has(.demo-banner) .sidebar {
+  top: 40px;
+  height: calc(100vh - 40px);
+}
+
+body:has(.demo-banner) .mobile-header {
+  top: 40px;
+}
+
+body:has(.demo-banner) .theme-toggle-btn {
+  top: calc(1.5rem + 40px);
+}
+
+body:has(.demo-banner) #toast-container {
+  top: calc(2rem + 40px);
+}

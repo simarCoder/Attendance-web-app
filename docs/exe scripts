@@ -1,0 +1,1 @@
+pyinstaller --clean --onefile --noconsole --icon=icon.ico --add-data "templates;templates" --add-data "static;static" backend/app.py

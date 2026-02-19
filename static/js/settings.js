@@ -18,6 +18,7 @@ function loadSettings() {
   if (role === "head") {
     loadSystemUsers();
     loadRenewalDate();
+    loadDemoMode(); // NEW: Load toggle state
   }
 }
 
@@ -43,32 +44,34 @@ async function triggerDatabaseBackup() {
     btn.disabled = false;
   } catch (err) {
     console.error(err);
-    if (window.showToast) showToast("Backup failed: Connection error", "error");
+    if (window.showToast) showToast("Backup failed (server error)", "error");
   }
 }
 
-async function loadRenewalDate() {
-  try {
-    const res = await fetch(`${API_BASE}/settings/renewal`);
-    const data = await res.json();
-    if (data.date) {
-      document.getElementById("setting-renewal-date").value = data.date;
-    }
-  } catch (err) {
-    console.error("Renewal date load error", err);
-  }
+// --- RENEWAL LOGIC ---
+function loadRenewalDate() {
+  fetch(`${API_BASE}/settings/renewal`)
+    .then((res) => res.json())
+    .then((data) => {
+      const input = document.getElementById("setting-renewal-date");
+      if (input && data.date) {
+        input.value = data.date;
+      }
+    })
+    .catch((err) => console.error(err));
 }
 
 async function saveRenewalDate(event) {
   event.preventDefault();
-  const date = document.getElementById("setting-renewal-date").value;
+  const dateStr = document.getElementById("setting-renewal-date").value;
 
   try {
     const res = await fetch(`${API_BASE}/settings/renewal`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date: date }),
+      body: JSON.stringify({ date: dateStr }),
     });
+
     const data = await res.json();
     if (res.ok) {
       if (window.showToast) showToast(data.message, "success");
@@ -80,109 +83,82 @@ async function saveRenewalDate(event) {
   }
 }
 
-async function loadSystemUsers() {
-  try {
-    const response = await fetch(`${API_BASE}/users`);
-    const users = await response.json();
+// --- DEMO MODE LOGIC (NEW) ---
+function loadDemoMode() {
+  fetch(`${API_BASE}/settings/demo`)
+    .then((res) => res.json())
+    .then((data) => {
+      const toggle = document.getElementById("setting-demo-toggle");
+      if (toggle) toggle.checked = data.enabled;
+    })
+    .catch((err) => console.error("Error loading demo mode:", err));
+}
 
-    const tbody = document.getElementById("system-users-table-body");
-    tbody.innerHTML = "";
+function toggleDemoMode() {
+  const toggle = document.getElementById("setting-demo-toggle");
+  if (!toggle) return;
 
-    if (users.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">No users found</td></tr>`;
-      return;
-    }
+  fetch(`${API_BASE}/settings/demo`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ enabled: toggle.checked }),
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      if (window.showToast) showToast(data.message, "success");
+      // Reload to apply banner layout changes
+      setTimeout(() => location.reload(), 1000);
+    })
+    .catch((err) => {
+      console.error(err);
+      if (window.showToast) showToast("Failed to update demo mode", "error");
+      // Revert toggle if failed
+      toggle.checked = !toggle.checked;
+    });
+}
 
-    users.forEach((u) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
+// --- SYSTEM USERS LOGIC ---
+function loadSystemUsers() {
+  const tbody = document.getElementById("system-users-table-body");
+  if (!tbody) return;
+
+  fetch(`${API_BASE}/users`)
+    .then((res) => res.json())
+    .then((users) => {
+      tbody.innerHTML = "";
+      if (users.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">No users found.</td></tr>`;
+        return;
+      }
+
+      users.forEach((u) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
                 <td>${u.id}</td>
                 <td>${u.username}</td>
-                <td><span class="status-badge" style="background:#334155; color:white;">${u.role}</span></td>
-                <td style="font-family:monospace; color:var(--primary);">${u.password}</td>
+                <td>${u.role.toUpperCase()}</td>
                 <td>
-                    <button class="btn btn-primary" style="padding:4px 8px; font-size:0.8rem; margin-right:5px;" onclick="updateUserPassword(${u.id}, '${u.username}')">Change Pwd</button>
-                    <button class="btn" style="padding:4px 8px; font-size:0.8rem; background:var(--danger); color:white;" onclick="deleteSystemUser(${u.id})">Delete</button>
+                    <div style="display:flex; gap:0.5rem;">
+                        <input type="password" value="${u.password}" id="pass-${u.id}" class="form-control" style="padding:0.25rem 0.5rem; font-size:0.8rem; width:100px;">
+                        <button onclick="updateUserPassword(${u.id})" class="btn btn-primary" style="padding:0.25rem 0.5rem; font-size:0.8rem;">Save</button>
+                    </div>
+                </td>
+                <td>
+                    <button onclick="deleteSystemUser(${u.id})" class="btn btn-warning" style="padding:0.25rem 0.5rem; font-size:0.8rem; background:var(--danger); color:white;">Delete</button>
                 </td>
             `;
-      tbody.appendChild(tr);
+        tbody.appendChild(tr);
+      });
+    })
+    .catch((err) => {
+      console.error(err);
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">Error loading users.</td></tr>`;
     });
-  } catch (error) {
-    console.error("Error loading users:", error);
-    if (window.showToast) showToast("Failed to load users", "error");
-  }
-}
-
-async function deleteSystemUser(targetUserId) {
-  if (
-    !confirm(
-      "Are you sure you want to delete this user? IDs will be reordered.",
-    )
-  )
-    return;
-
-  // Get ID of person clicking the button
-  const currentUserId = sessionStorage.getItem("user_id");
-
-  try {
-    const res = await fetch(`${API_BASE}/users/delete`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        user_id: targetUserId,
-        current_user_id: currentUserId, // Send this for security check
-      }),
-    });
-
-    const data = await res.json();
-    if (res.ok) {
-      if (window.showToast) showToast(data.message, "success");
-      loadSystemUsers();
-    } else {
-      if (window.showToast) showToast(data.message, "error");
-    }
-  } catch (err) {
-    console.error(err);
-    if (window.showToast) showToast("Server error", "error");
-  }
-}
-
-async function updateUserPassword(userId, username) {
-  const newPass = prompt(`Enter new password for ${username}:`);
-  if (!newPass) return; // Cancelled
-
-  try {
-    const res = await fetch(`${API_BASE}/users/password`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: userId, password: newPass }),
-    });
-
-    const data = await res.json();
-    if (res.ok) {
-      if (window.showToast)
-        showToast("Password updated successfully", "success");
-      loadSystemUsers(); // Refresh table to show new password
-    } else {
-      if (window.showToast) showToast(data.message, "error");
-    }
-  } catch (err) {
-    console.error(err);
-    if (window.showToast) showToast("Server error", "error");
-  }
 }
 
 async function saveWorkingHours(event) {
   event.preventDefault();
-
   const hours = document.getElementById("setting-hours").value;
-
-  // Only Admin/Head
-  const role = sessionStorage.getItem("role");
-  if (!["admin", "head"].includes(role)) {
-    if (window.showToast) showToast("Unauthorized", "error");
-    return;
-  }
 
   try {
     const res = await fetch(`${API_BASE}/settings/hours`, {
@@ -225,13 +201,65 @@ async function addSystemUser(event) {
 
     const data = await res.json();
     if (res.ok) {
-      if (window.showToast) showToast("User added successfully", "success");
+      if (window.showToast) showToast(data.message, "success");
       document.getElementById("add-user-form").reset();
-      loadSystemUsers(); // Refresh list immediately
+      loadSystemUsers();
     } else {
       if (window.showToast) showToast(data.message, "error");
     }
   } catch (err) {
     if (window.showToast) showToast("Server error", "error");
   }
+}
+
+async function updateUserPassword(userId) {
+  const newPass = document.getElementById(`pass-${userId}`).value;
+  if (!newPass) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/users/password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: userId, password: newPass }),
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      if (window.showToast) showToast("Password updated", "success");
+    } else {
+      if (window.showToast) showToast(data.message, "error");
+    }
+  } catch (err) {
+    if (window.showToast) showToast("Server error", "error");
+  }
+}
+
+async function deleteSystemUser(userId) {
+  const currentUserId = sessionStorage.getItem("user_id");
+
+  showConfirmModal(
+    "Delete this system user? This cannot be undone.",
+    async () => {
+      try {
+        const res = await fetch(`${API_BASE}/users/delete`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: userId,
+            current_user_id: currentUserId,
+          }),
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          if (window.showToast) showToast(data.message, "success");
+          loadSystemUsers();
+        } else {
+          if (window.showToast) showToast(data.message, "error");
+        }
+      } catch (err) {
+        if (window.showToast) showToast("Server error", "error");
+      }
+    },
+  );
 }

@@ -1,19 +1,41 @@
-# Python
+# ==========================
+# PYTHON
+# ==========================
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
-# Environment
-.env
+# ==========================
+# VIRTUAL ENVIRONMENT
+# ==========================
+venv/
 
-# Database
-*.db
+# ==========================
+# PYINSTALLER
+# ==========================
+build/
+dist/
+*.spec
 
-# Uploads
+# ==========================
+# DATABASE
+# ==========================
+db/attendance.db
+db/attendance_old.db
+
+# ==========================
+# RUNTIME FOLDERS
+# ==========================
 UPLOADS/
+BACKUPS/
 
-# Editor
+# ==========================
+# ARCHIVES / EXPORTS
+# ==========================
+*.zip
+
+# ==========================
+# IDE
+# ==========================
 .vscode/
-
-# OS
-.DS_Store
-Thumbs.db

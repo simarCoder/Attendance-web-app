@@ -13,6 +13,16 @@ window.addEventListener("employeesLoaded", (e) => {
 
 async function handleCheckIn() {
   const empId = document.getElementById("att-employee-select").value;
+
+  // Get manual inputs if exist (Admin/Head features)
+  const manualTimeInput = document.getElementById("att-manual-time");
+  const manualDateInput = document.getElementById("att-manual-date");
+
+  const manualTime = manualTimeInput ? manualTimeInput.value : null;
+  const manualDate = manualDateInput ? manualDateInput.value : null;
+
+  const role = sessionStorage.getItem("role");
+
   if (!empId) {
     if (window.showToast) showToast("Please select an employee", "error");
     else alert("Please select an employee");
@@ -20,15 +30,26 @@ async function handleCheckIn() {
   }
 
   try {
+    const payload = {
+      employee_id: parseInt(empId),
+      manual_time: manualTime,
+      manual_date: manualDate,
+      role: role,
+    };
+
     const response = await fetch(`${API_BASE}/attendance/checkin`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ employee_id: parseInt(empId) }),
+      body: JSON.stringify(payload),
     });
 
     if (response.ok) {
       if (window.showToast) showToast("Check-in Successful", "success");
-      // Small delay to ensure DB write is visible to read
+
+      // Clear manual inputs if success
+      if (manualTimeInput) manualTimeInput.value = "";
+      if (manualDateInput) manualDateInput.value = "";
+
       setTimeout(() => loadAttendanceHistory(empId), 100);
     } else {
       const data = await response.json();
@@ -43,21 +64,40 @@ async function handleCheckIn() {
 
 async function handleCheckOut() {
   const empId = document.getElementById("att-employee-select").value;
+
+  const manualTimeInput = document.getElementById("att-manual-time");
+  const manualDateInput = document.getElementById("att-manual-date");
+
+  const manualTime = manualTimeInput ? manualTimeInput.value : null;
+  const manualDate = manualDateInput ? manualDateInput.value : null;
+
+  const role = sessionStorage.getItem("role");
+
   if (!empId) {
     if (window.showToast) showToast("Please select an employee", "error");
     return;
   }
 
   try {
+    const payload = {
+      employee_id: parseInt(empId),
+      manual_time: manualTime,
+      manual_date: manualDate,
+      role: role,
+    };
+
     const response = await fetch(`${API_BASE}/attendance/checkout`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ employee_id: parseInt(empId) }),
+      body: JSON.stringify(payload),
     });
 
     if (response.ok) {
       if (window.showToast) showToast("Check-out Successful", "success");
-      // FIX: Added 200ms delay to prevent race condition where read happens before write commit
+
+      if (manualTimeInput) manualTimeInput.value = "";
+      if (manualDateInput) manualDateInput.value = "";
+
       setTimeout(() => loadAttendanceHistory(empId), 200);
     } else {
       const data = await response.json();

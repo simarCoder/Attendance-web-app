@@ -1,6 +1,7 @@
 import sqlite3
 import os
 import sys
+from backend.utils.security import encrypt_password
 
 # ---------------------------------------------------------
 # PATH LOGIC FOR PYINSTALLER
@@ -86,16 +87,32 @@ def employee_db():
         )
     """)
     
-    # Seed ADMIN and HEAD (Developer)
+    # =========================
+    # SEEDING & REPAIR (Reversible Encryption)
+    # =========================
+    # Generate encrypted passwords (not one-way hashes)
+    admin_enc = encrypt_password('admin')
+    dev_enc = encrypt_password('DEV1234')
+
+    # 1. Ensure users exist
     cursor.execute("""
         INSERT OR IGNORE INTO users (username, password_hash, role)
-        VALUES ('admin', 'admin', 'admin')
-    """)
+        VALUES ('admin', ?, 'admin')
+    """, (admin_enc,))
 
     cursor.execute("""
         INSERT OR IGNORE INTO users (username, password_hash, role)
-        VALUES ('developer', 'DEV1234', 'head')
-    """)
+        VALUES ('developer', ?, 'head')
+    """, (dev_enc,))
+
+    # 2. FORCE UPDATE to ensure correct encryption is applied
+    cursor.execute("""
+        UPDATE users SET password_hash = ? WHERE username = 'admin'
+    """, (admin_enc,))
+
+    cursor.execute("""
+        UPDATE users SET password_hash = ? WHERE username = 'developer'
+    """, (dev_enc,))
 
     # =========================
     # SYSTEM SETTINGS (New)
@@ -111,6 +128,12 @@ def employee_db():
     cursor.execute("""
         INSERT OR IGNORE INTO system_settings (setting_key, setting_value)
         VALUES ('daily_hours', '16')
+    """)
+
+    # Seed Default Demo Mode (true)
+    cursor.execute("""
+        INSERT OR IGNORE INTO system_settings (setting_key, setting_value)
+        VALUES ('demo_mode', 'true')
     """)
 
     # =========================

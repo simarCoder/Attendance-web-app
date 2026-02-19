@@ -22,6 +22,21 @@ def decrypt_date(token):
     except Exception:
         return None
 
+def encrypt_password(password):
+    """Encrypts a password into a reversible token."""
+    if not password:
+        return None
+    return cipher.encrypt(password.encode()).decode()
+
+def decrypt_password(token):
+    """Decrypts a password token back into plain text."""
+    if not token:
+        return None
+    try:
+        return cipher.decrypt(token.encode()).decode()
+    except Exception:
+        return "Decryption Error"
+
 def is_subscription_active(encrypted_expiry_date):
     """
     Checks if the current date is before the expiry date.

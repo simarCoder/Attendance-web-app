@@ -1,6 +1,14 @@
 import os
 import sys
+import signal
+import time
+import threading
+import webbrowser
 from flask import Flask, request, jsonify, render_template, url_for, send_from_directory
+from backend.utils.security import decrypt_password
+
+def open_browser():
+    webbrowser.open("http://127.0.0.1:5000")
 
 # --- UTILS ---
 from backend.utils.security import is_subscription_active, decrypt_date
@@ -50,58 +58,55 @@ from backend.services.settings import (
     delete_system_user,
     update_subscription_expiry,
     get_subscription_expiry_encrypted,
-    create_database_backup 
+    create_database_backup,
+    get_demo_mode_status, # NEW
+    update_demo_mode      # NEW
 )
 
 # ---------------------------------------------------------
-# PATH CONFIGURATION (CRITICAL FIX)
+# PATH CONFIGURATION
 # ---------------------------------------------------------
-# Check if running as a PyInstaller OneFile executable
 if getattr(sys, 'frozen', False):
     # FROZEN (EXE) MODE
-    # BASE_DIR: Location of EXE (for DB/Uploads persistence)
     BASE_DIR = os.path.dirname(sys.executable)
-    
-    # INTERNAL_DIR: Temp folder for assets (Templates/Static)
     INTERNAL_DIR = sys._MEIPASS
     template_folder = os.path.join(INTERNAL_DIR, 'templates')
     static_folder = os.path.join(INTERNAL_DIR, 'static')
-    
     app = Flask(__name__, template_folder=template_folder, static_folder=static_folder)
 else:
     # DEVELOPMENT MODE
-    # Your app.py is in /backend, but templates are in /templates (Root)
-    current_dir = os.path.dirname(os.path.abspath(__file__)) # .../backend
-    project_root = os.path.abspath(os.path.join(current_dir, '..')) # .../ (root)
-    
-    # Explicitly tell Flask where to find folders in the Root
+    current_dir = os.path.dirname(os.path.abspath(__file__)) 
+    project_root = os.path.abspath(os.path.join(current_dir, '..')) 
     template_folder = os.path.join(project_root, 'templates')
     static_folder = os.path.join(project_root, 'static')
-    
-    # BASE_DIR for Uploads (Project Root)
     BASE_DIR = project_root
-    
     app = Flask(__name__, template_folder=template_folder, static_folder=static_folder)
 
-# Configure Uploads
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'UPLOADS')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Initialize DB (Ensures tables exist on startup)
+# Initialize DB (and fix passwords)
 employee_db()
 
 # -------------------------
-# VIEW ROUTES (Render HTML)
+# VIEW ROUTES
 # -------------------------
 @app.route("/")
 def home():
-    """Renders the Login Page"""
-    return render_template("login.html")
+    encrypted_expiry = get_subscription_expiry_encrypted()
+    expiry_date = None
+    if encrypted_expiry:
+        expiry_date = decrypt_date(encrypted_expiry)
+    
+    # Pass demo mode status to template
+    demo_mode = get_demo_mode_status()
+    return render_template("login.html", expiry_date=expiry_date, demo_mode=demo_mode)
 
 @app.route("/dashboard")
 def dashboard():
-    """Renders the Main Dashboard"""
-    return render_template("dashboard.html")
+    # Pass demo mode status to template
+    demo_mode = get_demo_mode_status()
+    return render_template("dashboard.html", demo_mode=demo_mode)
 
 # -------------------------
 # AUTH ROUTES
@@ -116,10 +121,10 @@ def login_route():
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT user_id, role
+        SELECT user_id, role, password_hash
         FROM users
-        WHERE username = ? AND password_hash = ?
-    """, (username, password))
+        WHERE username = ?
+    """, (username,))
 
     user = cursor.fetchone()
     cursor.close()
@@ -128,7 +133,12 @@ def login_route():
     if not user:
         return jsonify({"error": "Invalid credentials"}), 401
 
-    user_id, role = user
+    user_id, role, stored_encrypted_pw = user
+
+    decrypted_pw = decrypt_password(stored_encrypted_pw)
+
+    if decrypted_pw != password:
+        return jsonify({"error": "Invalid credentials"}), 401
 
     if role != 'head':
         encrypted_expiry = get_subscription_expiry_encrypted()
@@ -229,16 +239,32 @@ def get_employee_profile(employee_id):
 # -------------------------
 @app.route("/attendance/checkin", methods=["POST"])
 def checkin_route():
+    data = request.json
+    manual_time = data.get("manual_time")
+    manual_date = data.get("manual_date")
+    role = data.get("role")
+
+    if (manual_time or manual_date) and role not in ['head', 'admin']:
+        return jsonify({"message": "Unauthorized: Only Admin/Head can set manual time or date"}), 403
+
     try:
-        check_in(request.json.get("employee_id"))
+        check_in(data.get("employee_id"), custom_time=manual_time, target_date=manual_date)
         return jsonify({"message": "Check-in successful"})
     except Exception as e:
         return jsonify({"message": str(e)}), 400
 
 @app.route("/attendance/checkout", methods=["POST"])
 def checkout_route():
+    data = request.json
+    manual_time = data.get("manual_time")
+    manual_date = data.get("manual_date")
+    role = data.get("role")
+
+    if (manual_time or manual_date) and role not in ['head', 'admin']:
+        return jsonify({"message": "Unauthorized: Only Admin/Head can set manual time or date"}), 403
+
     try:
-        check_out(request.json.get("employee_id"))
+        check_out(data.get("employee_id"), custom_time=manual_time, target_date=manual_date)
         return jsonify({"message": "Check-out successful"})
     except Exception as e:
         return jsonify({"message": str(e)}), 400
@@ -366,7 +392,6 @@ def delete_document_route_api():
 
 @app.route('/UPLOADS/<path:filename>')
 def uploaded_file(filename):
-    # Serve from the persistent UPLOAD_FOLDER defined at top
     return send_from_directory(UPLOAD_FOLDER, filename)
 
 # -------------------------
@@ -448,5 +473,40 @@ def update_renewal_route():
     except Exception as e:
         return jsonify({"message": str(e)}), 400
 
+# -------------------------
+# DEMO MODE ROUTES (NEW)
+# -------------------------
+@app.route("/settings/demo", methods=["GET"])
+def get_demo_route():
+    status = get_demo_mode_status()
+    return jsonify({"enabled": status})
+
+@app.route("/settings/demo", methods=["POST"])
+def update_demo_route():
+    data = request.json
+    try:
+        update_demo_mode(data.get("enabled"))
+        return jsonify({"message": "Demo mode updated"})
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500
+
+# -------------------------
+# SHUTDOWN ROUTE
+# -------------------------
+@app.route("/shutdown", methods=["POST"])
+def shutdown_server():
+    """Completely terminates the Flask application and PyInstaller process."""
+    try:
+        def kill_process():
+            time.sleep(1)
+            os.kill(os.getpid(), signal.SIGTERM)
+
+        threading.Thread(target=kill_process).start()
+        
+        return jsonify({"message": "Server shutting down..."}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000)
+    threading.Timer(1.0, open_browser).start()
+    app.run(host="127.0.0.1", port=5000, debug=False, use_reloader=False)

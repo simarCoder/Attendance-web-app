@@ -4,7 +4,7 @@ import shutil
 from datetime import datetime
 from backend.database import get_connection
 from backend.services.employee import recalculate_all_employee_rates
-from backend.utils.security import encrypt_date, decrypt_date
+from backend.utils.security import encrypt_date, decrypt_date, encrypt_password, decrypt_password
 
 # ---------------------------------------------------------
 # PATH LOGIC FOR PYINSTALLER
@@ -40,6 +40,30 @@ def update_working_hours(new_hours):
     cursor.close()
     conn.close()
     recalculate_all_employee_rates()
+
+# --- DEMO MODE LOGIC (NEW) ---
+def get_demo_mode_status():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT setting_value FROM system_settings WHERE setting_key = 'demo_mode'")
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    # Default to True if the row doesn't exist yet
+    return row[0] == 'true' if row else True
+
+def update_demo_mode(enabled):
+    val = 'true' if enabled else 'false'
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO system_settings (setting_key, setting_value) 
+        VALUES ('demo_mode', ?) 
+        ON CONFLICT(setting_key) DO UPDATE SET setting_value = excluded.setting_value
+    """, (val,))
+    conn.commit()
+    cursor.close()
+    conn.close()
 
 # --- BACKUP LOGIC ---
 def create_database_backup():
@@ -112,10 +136,13 @@ def add_system_user(username, password, role):
         conn.close()
         raise ValueError("Username already exists")
 
+    # ENCRYPT PASSWORD (Reversible)
+    encrypted_pw = encrypt_password(password)
+
     cursor.execute("""
         INSERT INTO users (username, password_hash, role)
         VALUES (?, ?, ?)
-    """, (username, password, role))
+    """, (username, encrypted_pw, role))
     _renumber_users(cursor)
     conn.commit()
     cursor.close()
@@ -128,12 +155,24 @@ def get_all_system_users():
     rows = cursor.fetchall()
     cursor.close()
     conn.close()
-    return rows
+    
+    # Decrypt passwords for display
+    users = []
+    for row in rows:
+        user_id, username, encrypted_pw, role = row
+        decrypted_pw = decrypt_password(encrypted_pw)
+        users.append((user_id, username, decrypted_pw, role))
+        
+    return users
 
 def update_user_password(user_id, new_password):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("UPDATE users SET password_hash = ? WHERE user_id = ?", (new_password, user_id))
+    
+    # ENCRYPT PASSWORD
+    encrypted_pw = encrypt_password(new_password)
+    
+    cursor.execute("UPDATE users SET password_hash = ? WHERE user_id = ?", (encrypted_pw, user_id))
     conn.commit()
     cursor.close()
     conn.close()
