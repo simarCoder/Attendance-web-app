@@ -39,3 +39,9 @@ BACKUPS/
 # IDE
 # ==========================
 .vscode/
+
+# Executables
+*.exe
+
+# Distribution folders
+Employee_Management_System/
